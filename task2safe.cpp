@@ -4,19 +4,21 @@
 #include <vector>
 #include <string>
 #include <pthread.h>
+#include <numeric>
 
 using namespace std;
 
 // Global variables
-int numOfPrimes = 0, numOfPalindromes = 0, numOfPalindromicPrimes = 0, totalNums = 0;
+int primeCounter = 0, palinCounter = 0, palinPrimeCounter = 0, totalNums = 0, scope = 0;
 int rangeStart, rangeEnd, T; // Start and end range, number of threads
+bool manyWorkers = false;
 string *Threadinfo;
-vector<int> PrimeList, PalindromeList, PalindromicPrimesList;
+vector<int> PrimeList, PalinList, PalinPrimesList;
 pthread_mutex_t mu_lock; // Mutex for thread safety
 
 // Check if a number is prime
 bool isPrime(int num)
-{ // function on web
+{ // function already on the web
     if (num < 2)
         return false;
     for (int i = 2; i * i <= num; i++)
@@ -29,7 +31,7 @@ bool isPrime(int num)
 
 // Check if a number is a palindrome
 bool isPalindrome(int num)
-{ // convert it to string and then reverse it to see if it is equal
+{ // convert it to string and then reverse it to see if it is equal , uses <bits/stdc++.h>
     string str;
     str = to_string(num);
     string rev = str;
@@ -46,50 +48,40 @@ void *processRange(void *arg)
 {
     int threadID = *(int *)arg;
 
-    int rangePerThread = (rangeEnd - rangeStart) / T;
-    int remainder = (rangeEnd - rangeStart) % T; // Extra numbers to be distributed
-
+    int rangePerThread = (scope) / T;
     int start = rangeStart + threadID * rangePerThread;
     int end;
     // definning what the end is for each thread
-    if (threadID == T - 1)
-    {
-        end = rangeEnd; // Last thread handles the remaining range
-    }
-    else
-    {
-        end = start + rangePerThread;
-    }
-
+    end = start + rangePerThread;
+    // saving the thread info in the dynamic array
     Threadinfo[threadID] = string("ThreadID=") + to_string(threadID) + ", startNum=" + to_string(start) + ", endNum=" + to_string(end) + "\n";
-    // cout << "ThreadID=" << threadID << ", startNum=" << start << ", endNum=" << end << "\n";
-
-    for (int num = start + 1; num <= end; num++)
+    // getting the values
+    for (int num = start + 1; num <= end; num++) // start + 1 because the pdf its like this , we dont start with first number
     {
         bool prime = isPrime(num);
         bool palindrome = isPalindrome(num);
 
-        pthread_mutex_lock(&mu_lock); // Synchronize updates
+        pthread_mutex_lock(&mu_lock); // locks to prevent race condition when writin on these global varibales
         if (prime)
         {
-            numOfPrimes++;
+            primeCounter++;
             PrimeList.push_back(num);
         }
         if (palindrome)
         {
-            numOfPalindromes++;
-            PalindromeList.push_back(num);
+            palinCounter++;
+            PalinList.push_back(num);
         }
         if (prime && palindrome)
         {
-            numOfPalindromicPrimes++;
-            PalindromicPrimesList.push_back(num);
+            palinPrimeCounter++;
+            PalinPrimesList.push_back(num);
         }
         totalNums++;
         pthread_mutex_unlock(&mu_lock);
     }
 
-    return nullptr; // Return null <idk why , it solves the error>
+    return nullptr; // Return null <pthread needs it no exit>
 }
 
 // Main function
@@ -107,9 +99,27 @@ int main(int argc, char *argv[])
     ifstream inputFile("in.txt");
 
     inputFile >> rangeStart >> rangeEnd;
-
-    pthread_t threads[T]; // Array to hold  thread identifiers <must do before pthread_create >
-    int threadIDs[T];
+    scope = rangeEnd - rangeStart;
+    int noJob = 0; // couter to make easy debbugging only we can remove it
+    int oldT = T;
+    if (T > scope) // if threads is more than range . make threads equal range
+    {
+        noJob = T - scope;
+        T = scope;
+    }
+    else
+    {
+        if (scope % T != 0) // if range is not devisibile on T , keep
+        {
+            while (scope % T != 0)
+            {
+                T--;
+                noJob++;
+            }
+        }
+    }
+    pthread_t threads[T];
+    int threadIDs[T]; // Array to hold  thread identifiers <must do before pthread_create >
     Threadinfo = new string[T];
     pthread_mutex_init(&mu_lock, NULL); // Initialize mutex
 
@@ -137,22 +147,34 @@ int main(int argc, char *argv[])
         outputFile << prime << "\n";
 
     outputFile << "The palindrome numbers are:\n";
-    for (int palindrome : PalindromeList)
+    for (int palindrome : PalinList)
         outputFile << palindrome << "\n";
 
     outputFile << "The palindromicPrime numbers are:\n";
-    for (int palindromicPrime : PalindromicPrimesList)
+    for (int palindromicPrime : PalinPrimesList)
         outputFile << palindromicPrime << "\n";
 
     // Print summary to terminal
-
-    for (int i = 0; i < T; i++)
+    for (int i = 0; i < oldT; i++)
     {
-        cout << Threadinfo[i];
+        if (i + 1 > T) // Print all threads info and know those who has no job
+        {
+            cout << "ThreadID=" << i << " -This Thread has no job-\n";
+            noJob--;
+        }
+        else
+        {
+            cout << Threadinfo[i];
+        }
     }
-    cout << "totalNums=" << totalNums << ", numOfPrime=" << numOfPrimes
-         << ", numOfPalindrome=" << numOfPalindromes
-         << ", numOfPalindromicPrime=" << numOfPalindromicPrimes << "\n";
+    cout << "totalNums=" << totalNums << ", numOfPrime=" << primeCounter
+         << ", numOfPalindrome=" << palinCounter
+         << ", numOfPalindromicPrime=" << palinPrimeCounter << "\n";
+
+    if (noJob == 0) // هاي مدح الي عشاني اشتغلت واتعبت
+    {
+        cout << "my code is Awesome \nalso Momani & Obada is noobs :D";
+    }
 
     return 0;
 }
