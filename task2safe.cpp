@@ -4,7 +4,6 @@
 #include <vector>
 #include <string>
 #include <pthread.h>
-#include <numeric>
 
 using namespace std;
 
