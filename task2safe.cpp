@@ -17,7 +17,7 @@ pthread_mutex_t mu_lock; // Mutex for thread safety
 
 // Check if a number is prime
 bool isPrime(int num)
-{ // function already on the web
+{
     if (num < 2)
         return false;
     for (int i = 2; i * i <= num; i++)
@@ -169,11 +169,6 @@ int main(int argc, char *argv[])
     cout << "totalNums=" << totalNums << ", numOfPrime=" << primeCounter
          << ", numOfPalindrome=" << palinCounter
          << ", numOfPalindromicPrime=" << palinPrimeCounter << "\n";
-
-    if (noJob == 0) // هاي مدح الي عشاني اشتغلت واتعبت
-    {
-        cout << "my code is Awesome \nalso Momani & Obada is noobs :D";
-    }
 
     return 0;
 }
